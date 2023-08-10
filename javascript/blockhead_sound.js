@@ -1,5 +1,7 @@
 function play_sound (sound)
   {
+  if (options.length > OPTION_SOUND && !options[OPTION_SOUND].on()) return;
+
   var s;
   
   if (sound === "start")
@@ -109,27 +111,50 @@ function play_sound (sound)
 
 function Music_Control ()
   {
-  if (option_music === true)
+  //if (!options[OPTION_MUSIC].on() || music_state == MUSIC_OFF)
+  if (music_state == MUSIC_OFF)
     {
-    if (game_state === GAME)
-      {
-      if (newsong === true)
-        {
-        music_player.setPaused(true);
-        newsong = false;
-        while (music_track === last_track)
-          {
-          music_track = random (0, music.length - 1);
-          }
-        last_track = music_track;
-        }
+    //if (!music_player.getPaused()) music_player.setPaused (true);
+    if (!music_player.paused) music_player.paused = true;
+    return;
+    }
 
-      if (music_player.getPaused() === true && music[music_track].loaded === true)
+  if (game_state === GAME || game_state == TUMBLE)
+    {
+    // stop the music on game end
+    if (game_won === true || game_lost === true)
+      {
+      //TODO: change this to stop instead of pause
+      //if (music_player.getPaused() != true) music_player.setPaused (true);
+      if (!music_player.paused) music_player.paused = true;
+      music_state = MUSIC_STOPPED;
+      }
+
+    // pick new song
+    //else if (newsong === true || music_state == MUSIC_NEW)
+    else if (music_state == MUSIC_NEW)
+      {
+      //music_player.setPaused (true);
+      music_player.paused = true;
+      newsong = false;
+      while (music_track === last_track)
         {
-        music_player = createjs.Sound.play (music[music_track].id);
-        music_player.volume = music_volume;
-        music_player.loop = -1;
+        music_track = random (0, music.length - 1);
         }
+      last_track = music_track;
+      music_state = MUSIC_LOADING;
+      }
+
+    // start the music
+    //else if ((document.visibilityState === "visible" && music_player.getPaused() === true && music[music_track].loaded === true)
+    // else if ((document.visibilityState === "visible" && music_player.paused === true && music[music_track].loaded === true)
+    //   || (music_state == MUSIC_LOADING && music[music_track].loaded === true))
+    else if (music_state == MUSIC_LOADING && music[music_track].loaded === true)
+      {
+      music_player = createjs.Sound.play (music[music_track].id);
+      music_player.volume = music_volume;
+      music_player.loop = -1;
+      music_state = MUSIC_PLAYING;
       }
     }
   }

@@ -1,5 +1,5 @@
 // Blockhead
-// Burning Freak Games
+// Nightmare Games
 // Zach Bowman
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -13,6 +13,7 @@ var game;
 
 // game
 var game_state = LOADING;
+var next_game_state = SPLASH;
 var game_active = false;
 var played_game = false;
 var game_won = false;
@@ -26,6 +27,9 @@ var menu_selection = 0;
 var display_options = false;
 var options_selection = 0;
 var background_index = 0;
+var random_generation = true;  // Only false when testing hard-coded scenarios.
+var tumble_down = true;
+var music_state = MUSIC_STOPPED;
 
 // video
 var screen_width = 400;
@@ -42,6 +46,7 @@ var key_right = false;
 var key_down = false;
 var key_enter = false;
 var key_esc = false;
+var key_space = false;
 
 // title screen
 var title_border = 150;
@@ -51,39 +56,24 @@ var splash_text = "CLICK TO START";
 var title_pingponger = new Pingponger ();
 var sound_loaded_flag = false;
 
-// fade
-var fade_opacity = 0;
-var fade_direction = NONE;
-var next_game_state = SPLASH;
+// var fade_opacity = 0;
+// var fade_direction = NONE;
 
-// options
-var option_difficulty;
-var option_difficulty_next;
-var option_height;
-var option_timer;
-var option_timer_next;
-var option_sound;
-var option_music;
+// physics
+var initial_velocity_on_drop = 1;
+var gravity_acceleration = 0.2;
+var gravity_max_game = 6;
+var gravity_max_tumble = 6;
 
 // blocks
-var gravity = 4;
-//var block.list.length = 60;
-//var block = [];
-//for (var b = 0; b < block.list.length; b += 1) block.list[b] = new Block ();
 var block = new Block_List ();
-
-// tiles
-var tilesize_x = 40;
-var tilesize_y = 40;
-var tiles_x;// = 8;  // width in tiles of puzzle including walls
-var tiles_y;// = 10; // height
 
 // frame pulse data
 var pulse_frames = 30;         // number of drawing frames for pulse to last (30 = 1 second)
 var pulse_increasing = true;   // fading in = true, out = false
-var pulse_speed;               // amount to increase each frame (256 / frames)
-var pulse_fade = 0;
-var pulse_max = 160;
+var pulse_speed;               // amount to increase each frame (1.0 / frames)
+var pulse_fade = 0.0;
+var pulse_max = 1.0;//160;
 
 // graphics
 var solid_black = Sprite ("solid_black");
@@ -98,11 +88,15 @@ var lightning_sprite = Sprite ("lightning");
 var lightning_large_sprite = Sprite ("lightning_large");
 var big_purple_sprite = Sprite ("bigpurple");
 var blockhead_logo_sprite = Sprite ("blockhead3");
+
+var text_loading_sprite = Sprite ("text_loading_2");
+var text_click_to_start_sprite = Sprite ("text_click_to_start_2");
+
 var menu_new_sprite = Sprite ("menu_newgame2");
 var menu_instruct_sprite = Sprite ("menu_instruct2");
 var menu_exit_sprite = Sprite ("menu_exit2");
 var menu_resume_sprite = Sprite ("menu_resume2");
-//var menu_credits_sprite = Sprite ("credits_sprite2");
+
 var ng_sprite = Sprite ("ng");
 var background =
   [
@@ -113,10 +107,10 @@ var background =
   Sprite ("bg12a"),
   Sprite ("bg14b")
   ];
+
 var instructions1 = Sprite ("instructions1");
 var instructions2 = Sprite ("instructions2");
 var instructions_blur = Sprite ("instructions_blur");
-//var credits_screen = Sprite ("credits7");
 var chart_sprite = Sprite ("Chart1");
 var chart_stuff_sprite = Sprite ("Chart2");
 var wall_sprite = Sprite ("Walls");
@@ -125,34 +119,60 @@ var grabber_sprite = Sprite ("Grabber");
 var frame_sprite = Sprite ("Frame3");
 var block_sprite = Sprite ("Blocks");
 var rainbow_sprite = Sprite ("Rainbow");
+
 var box_sprite = Sprite ("Box4");
 var box_newgame_sprite = Sprite ("box_newgame");
 var box_menu_sprite = Sprite ("box_menu");
 var box_options_sprite = Sprite ("box_options");
-var timer_0_sprite = Sprite ("timer_0");
-var timer_1_sprite = Sprite ("timer_1");
-var timer_2_sprite = Sprite ("timer_2");
-var timer_3_sprite = Sprite ("timer_3");
-var timer_4_sprite = Sprite ("timer_4");
-var timer_5_sprite = Sprite ("timer_5");
-var timer_6_sprite = Sprite ("timer_6");
-var timer_7_sprite = Sprite ("timer_7");
-var timer_8_sprite = Sprite ("timer_8");
-var timer_9_sprite = Sprite ("timer_9");
-var counter_0_sprite = Sprite ("counter_0");
-var counter_1_sprite = Sprite ("counter_1");
-var counter_2_sprite = Sprite ("counter_2");
-var counter_3_sprite = Sprite ("counter_3");
-var counter_4_sprite = Sprite ("counter_4");
-var counter_5_sprite = Sprite ("counter_5");
-var counter_6_sprite = Sprite ("counter_6");
-var counter_7_sprite = Sprite ("counter_7");
-var counter_8_sprite = Sprite ("counter_8");
-var counter_9_sprite = Sprite ("counter_9");
+
+var timer_number_sprites =
+  [
+  Sprite ("timer_0"),
+  Sprite ("timer_1"),
+  Sprite ("timer_2"),
+  Sprite ("timer_3"),
+  Sprite ("timer_4"),
+  Sprite ("timer_5"),
+  Sprite ("timer_6"),
+  Sprite ("timer_7"),
+  Sprite ("timer_8"),
+  Sprite ("timer_9")
+  ];
+
+var counter_number_purple_sprites = 
+  [
+  Sprite ("counter_0"),
+  Sprite ("counter_1"),
+  Sprite ("counter_2"),
+  Sprite ("counter_3"),
+  Sprite ("counter_4"),
+  Sprite ("counter_5"),
+  Sprite ("counter_6"),
+  Sprite ("counter_7"),
+  Sprite ("counter_8"),
+  Sprite ("counter_9")
+  ];
+
+var counter_number_white_sprites =
+  [
+  Sprite ("counter_0_white"),
+  Sprite ("counter_1_white"),
+  Sprite ("counter_2_white"),
+  Sprite ("counter_3_white"),
+  Sprite ("counter_4_white"),
+  Sprite ("counter_5_white"),
+  Sprite ("counter_6_white"),
+  Sprite ("counter_7_white"),
+  Sprite ("counter_8_white"),
+  Sprite ("counter_9_white")
+  ];
+
 var counter_label = Sprite ("blocksleft3");
+
 var youwin_sprite = Sprite ("youwin");
 var youlose_sprite = Sprite ("youlose");
 var playagain_sprite = Sprite ("playagain");
+
 var particle_red = Sprite ("particle_red");
 var particle_orange = Sprite ("particle_orange");
 var particle_yellow = Sprite ("particle_yellow");
@@ -160,9 +180,8 @@ var particle_green = Sprite ("particle_green");
 var particle_blue = Sprite ("particle_blue");
 var particle_purple = Sprite ("particle_purple");
 var particle_white = Sprite ("particle_white");
-//var particle_grey = Sprite ("particle_grey");
-//var particle_black = Sprite ("particle_black");
 var particle_smoke_sprite = Sprite ("particle_smoke");
+
 var solid_white = Sprite ("solid_white");
 var solid_red = Sprite ("solid_red");
 var solid_orange = Sprite ("solid_orange");
@@ -171,35 +190,32 @@ var solid_green = Sprite ("solid_green");
 var solid_blue = Sprite ("solid_blue");
 var solid_purple = Sprite ("solid_purple");
 var color_flash_sprite = Sprite ("solid_white");
+
 var splash_sprite = Sprite ("splash2");
 var intro_lightning1_sprite = Sprite ("lightning1a");
 var intro_lightning2_sprite = Sprite ("lightning2");
 var intro_lightning3_sprite = Sprite ("lightning3");
-//var credits_hypno = Sprite ("hypno3");
-var options_menu_sprite = Sprite ("options_menu");
-var options_difficulty_1_sprite = Sprite ("options_difficulty_1");
-var options_difficulty_2_sprite = Sprite ("options_difficulty_2");
-var options_difficulty_3_sprite = Sprite ("options_difficulty_3");
-var options_difficulty_4_sprite = Sprite ("options_difficulty_4");
-var options_difficulty_5_sprite = Sprite ("options_difficulty_5");
-var options_difficulty_6_sprite = Sprite ("options_difficulty_6");
-var options_difficulty_7_sprite = Sprite ("options_difficulty_7");
-var options_difficulty_8_sprite = Sprite ("options_difficulty_8");
-var options_difficulty_9_sprite = Sprite ("options_difficulty_9");
-var options_difficulty_10_sprite = Sprite ("options_difficulty_10");
-var options_height_1_sprite = Sprite ("options_height_1");
-var options_height_2_sprite = Sprite ("options_height_2");
-var options_height_3_sprite = Sprite ("options_height_3");
-var options_height_4_sprite = Sprite ("options_height_4");
-var options_height_5_sprite = Sprite ("options_height_5");
-var options_height_6_sprite = Sprite ("options_height_6");
-var options_height_7_sprite = Sprite ("options_height_7");
-var options_sound_on_sprite = Sprite ("options_sound_on");
-var options_sound_off_sprite = Sprite ("options_sound_off");
-var options_music_on_sprite = Sprite ("options_music_on");
-var options_music_off_sprite = Sprite ("options_music_off");
-var options_timer_on_sprite = Sprite ("options_timer_on");
-var options_timer_off_sprite = Sprite ("options_timer_off");
+
+var options_sound_sprite = Sprite ("options_sound3");
+var options_music_sprite = Sprite ("options_music3");
+var options_difficulty_sprite = Sprite ("options_difficulty3");
+var options_height_sprite = Sprite ("options_height3");
+var options_timer_sprite = Sprite ("options_timer3");
+
+var options_on_sprite = Sprite ("options_on3");
+var options_off_sprite = Sprite ("options_off3");
+
+var options_1_sprite = Sprite ("options_1a");
+var options_2_sprite = Sprite ("options_2a");
+var options_3_sprite = Sprite ("options_3a");
+var options_4_sprite = Sprite ("options_4a");
+var options_5_sprite = Sprite ("options_5a");
+var options_6_sprite = Sprite ("options_6a");
+var options_7_sprite = Sprite ("options_7a");
+var options_8_sprite = Sprite ("options_8a");
+var options_9_sprite = Sprite ("options_9a");
+var options_10_sprite = Sprite ("options_10a");
+
 var border_sprite = Sprite ("border3");
 var options_prompt_sprite = Sprite ("options_prompt");
 var block_smasher_sprite = Sprite ("block_smasher");
@@ -223,14 +239,19 @@ var intro_expander   = new Expander ();
 
 var click_to_start_sound = false;
 
-// puzzle pixel location and size
-var puzzle_width, puzzle_height;
-var puzzle_x = screen_x_offset + (tilesize_x / 2);
+// Dimensions
+var puzzle_pixel_width, puzzle_pixel_height;
+var puzzle_x = screen_x_offset + (tile_pixel_width / 2);
 var puzzle_y = 100;
- 
+var tile_pixel_width = 40;
+var tile_pixel_height = 40;
+var puzzle_tile_width;// = 8;  // width in tiles of puzzle including walls
+var puzzle_tile_height;// = 10; // height
+
 // block grids
-var color_grid = [[]];
+var color_grid = [[]];  // TODO: Do we really need this?
 var number_grid = [[]];
+var tumble_grid = [[]];
 
 // animation frame counters
 var frame_frame;
@@ -238,9 +259,9 @@ var frame_count;
 var frame_delay;
 
 // objects
-var big_purple = new Block ();
-var lightning = new Game_Object ();
-var blockhead_logo = new Game_Object ();
+var big_purple = new Block();
+var lightning = new Game_Object();
+var blockhead_logo = new Game_Object();
 
 var menu_new = new Game_Object (menu_new_sprite, true);
 var menu_instruct = new Game_Object (menu_instruct_sprite, true);
@@ -248,30 +269,43 @@ var menu_resume = new Game_Object (menu_resume_sprite, true);
 
 var ng = new Game_Object (ng_sprite);
 
-var grabber = new Grabber ();
-var conveyor = new Conveyor ();
-var chart = new Chart ();
-var box = new Game_Object ();
+var grabber = new Grabber();
+var conveyor = new Conveyor();
+var chart = new Chart();
+var box = new Game_Object();
+
 var box_newgame = new Game_Object (box_newgame_sprite);
 var box_menu = new Game_Object (box_menu_sprite);
 var box_options = new Game_Object (box_options_sprite);
-var block_counter = new Game_Object ();
-var timer = new Timer ();
-var next1 = new Next_Block ();
-var next2 = new Next_Block ();
-var next3 = new Next_Block ();
-var splash = new Game_Object ();
-var date = new Date();
-//   var title_screen = new Game_Object ();
-//   var title_bg = new Game_Object ();
 
-var options_difficulty_object = new Game_Object ();
-var options_height_object = new Game_Object ();
-var options_sound_object = new Game_Object ();
-var options_music_object = new Game_Object ();
-var options_menu_object = new Game_Object ();
-var options_timer_object = new Game_Object ();
-var options_resume_object = new Game_Object ();
+var block_counter = new Game_Object();
+var timer = new Timer();
+var timer_interval = null;
+var next1 = new Next_Block();
+var next2 = new Next_Block();
+var next3 = new Next_Block();
+var splash = new Game_Object();
+var date = new Date();
+
+var options =
+  [
+  new Option (menu_resume_sprite, true, toggle_options, "none"),
+  new Option (options_sound_sprite, true, null, "bool", true),
+  new Option (options_music_sprite, true, toggle_music, "bool", true),
+  new Option (options_difficulty_sprite, true, null, "int", 3, 1, 10),
+  new Option (options_height_sprite, true, null, "int", 3, 1, 7),
+  new Option (options_timer_sprite, true, null, "bool", true)
+  ];
+
+var OPTION_RESUME = 0;
+var OPTION_SOUND = 1;
+var OPTION_MUSIC = 2;
+var OPTION_DIFFICULTY = 3;
+var OPTION_HEIGHT = 4;
+var OPTION_TIMER = 5;
+
+// var options_timer_object = new Game_Object();
+// var options_timer_value_object = new Game_Object();
 
 var game_region = new Rectangle();
 
@@ -365,12 +399,25 @@ var music =
   {id: "puzzle5", src: "music/puzzle5.mp3", loaded: false}
   ];
 
+//var os = window.navigator?.userAgentData;//?.platform || window.navigator?.platform;
+//var navigator = navigator;
+var platform = navigator.platform;
+var user_agent = navigator.userAgent;
+var is_ios = platform === "iPhone" || platform === "iPad" || platform === "iPod";// ? true : false;
+  
 var music_player = null;
 var music_volume = 0.5;
 var music_track = null;
 var last_track = null;
 var total_sounds = 0;
 var sounds_loaded = 0;
+var newsong = true;
+
+var timer_opacity = 255;
+var counter_opacity = 255;
+   
+// credits screen
+//   var credits_rotation = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -386,10 +433,11 @@ function html_init()
   big_purple.x = (screen_width / 2) - 40;
   big_purple.y = screen_y_offset + 168;
   big_purple.color = P;
-  big_purple.status = 0;
-  big_purple.change = CHANGE_NONE;
+  big_purple.alive = true;
+  big_purple.state = CHANGE_NONE;
   big_purple.frame = 0;
-  big_purple.dir = NONE;
+  //big_purple.dir = NONE;
+  big_purple.vertical_velocity = 0;
 
   // lightning
   lightning.frame = 0;
@@ -401,7 +449,8 @@ function html_init()
   blockhead_logo.x = screen_x_offset + (screen_width / 2);
   blockhead_logo.y = screen_y_offset + 60;
 
-  title_screen_bg ();
+  pulse_speed = pulse_max / pulse_frames;  // amount to increase each frame
+
   init_sound();
   }
 
@@ -409,6 +458,7 @@ function html_init()
 
 setInterval (function()
   {
+  // Both LOADING and SPLASH game states.
   if (splash_clicked === false) splash_screen_update();
   else game.update();
 
@@ -417,12 +467,13 @@ setInterval (function()
     if (canvas_2d)
       {
       if (splash_clicked === false) splash_screen_draw();
-      else game.draw();
+      else game.main_draw();
       }
     }
   catch (error)
     {
-    console.log ("canvas_2d not ready yet.");
+    //console.log ("canvas_2d not ready yet.");
+    console.log (error);
     }
   }, 1000 / fps);
 
@@ -479,19 +530,15 @@ function all_sounds_loaded (event)
   // load music async.
   createjs.Sound.addEventListener("fileload", music_track_loaded);
   createjs.Sound.registerSounds (music, "");
+  music_state = MUSIC_LOADING;
   }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 function splash_screen_update ()
   {
-  click_here_counter += 1;
-  if (click_here_counter >= click_here_delay)
-    {
-    click_here_counter = 0;
-    if (click_here_onoff === true) click_here_onoff = false;
-    else click_here_onoff = true;
-    }
+  Update_Loading_Text();
+  Update_Goal_Frame_Pulse();
 
   if (game_state === SPLASH)
     {
@@ -513,10 +560,16 @@ function splash_screen_draw ()
   if (game_state === LOADING)
     {
     splash_sprite.draw_from_center(canvas_2d, screen_width / 2, screen_height / 2);
+    //splash_sprite.draw_rotated(canvas_2d, screen_width / 2, screen_height / 2, 5);
+    //splash_sprite.draw_rotated_from_center(canvas_2d, screen_width / 2, screen_height / 2, 5);
 
-    canvas_2d.fillStyle = "#FFFFFF";
-    canvas_2d.font = "24px impact";
-    if (click_here_onoff === true) canvas_2d.fillText (loading_text, 150, 500);
+    //canvas_2d.fillStyle = "#FFFFFF";
+    //canvas_2d.font = "24px impact";
+    //if (click_here_onoff === true)
+      //{
+      //canvas_2d.fillText (loading_text, 150, 500);
+      text_loading_sprite.draw_from_center(canvas_2d, screen_width / 2, 500, pulse_fade);
+      //}
     }
   else if (game_state === SPLASH)
     {
@@ -539,21 +592,22 @@ function splash_screen_draw ()
     if (lightning_large_sprite.draw_part != undefined) lightning_large_sprite.draw_part (canvas_2d, r, x, y);
 
     // purple block
-    r.x = 80 * big_purple.frame;
-    r.y = 0;
-    r.width = 80;
-    r.height = 80;
-    if (big_purple_sprite.draw_part != undefined) big_purple_sprite.draw_part (canvas_2d, r, big_purple.x, big_purple.y);
+    if (!is_ios)
+      {
+      r.x = 80 * big_purple.frame;
+      r.y = 0;
+      r.width = 80;
+      r.height = 80;
+      if (big_purple_sprite.draw_part != undefined) big_purple_sprite.draw_part (canvas_2d, r, big_purple.x, big_purple.y);
+      }
 
     blockhead_bounce.bounce (blockhead_logo_sprite, blockhead_logo.x, blockhead_logo.y, 20, 4, 4);
 
-    canvas_2d.fillStyle = "#FF00FF";
-    canvas_2d.font = "24px impact";
-    if (click_here_onoff === true) canvas_2d.fillText (splash_text, 125, 400);
+    text_click_to_start_sprite.draw_from_center(canvas_2d, screen_width / 2, 400, pulse_fade);
     }
   }
 
-// ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 function splash_screen_click ()
   {
@@ -561,6 +615,7 @@ function splash_screen_click ()
   div.removeEventListener ("click", splash_screen_click, false);
   game = new blockhead_namespace.blockhead();
   game_state = MENU;
+  music_state = MUSIC_PLAYING;
 
   canvas_html.addEventListener   ("mousedown",   function() {mouse_down (false, mouse_x, mouse_y)}, false);
   canvas_html.addEventListener   ("mousemove",   function(event) {mouse_move (event, false, canvas_html)}, false);
@@ -569,9 +624,20 @@ function splash_screen_click ()
   canvas_html.addEventListener   ("touchend",    function() {mouse_up (true)},    false);
   document.body.addEventListener ("mouseup",     function() {mouse_up (false)},   false);
   document.body.addEventListener ("touchcancel", function() {mouse_up (true)},    false);
-  document.body.addEventListener ('touchmove',   function (event) {event.preventDefault()}, false);
-  document.addEventListener ('keydown', keyboard_down, false);
-  document.addEventListener ('keyup', keyboard_up, false);
+  //document.body.addEventListener ('touchstart',  function (event) {event.preventDefault();}, false);
+  //document.body.addEventListener ('touchmove',   function (event) {event.preventDefault();}, false);
+  //document.addEventListener ('touchstart',  function (event) {event.preventDefault();}, {passive: false});
+  //document.addEventListener ('touchmove',   function (event) {event.preventDefault();}, {passive: false});
+  document.addEventListener ("keydown", keyboard_down, false);
+  document.addEventListener ("keyup", keyboard_up, false);
+  document.addEventListener ("visibilitychange", visibility_change, false);
+  window.addEventListener ("load", function()
+    {
+    setTimeout(function()
+      {
+      window.scrollTo(0, 1);
+      }, 0);
+    });
 
   play_sound ("start");
   }
@@ -582,18 +648,33 @@ this.blockhead_namespace = this.blockhead_namespace || {};
 
 ////////////////////////////////////////////////////////////////////////////////
 
+function visibility_change (event)
+  {
+  //if (!options[OPTION_MUSIC].on() || music_state == MUSIC_OFF) return;
+  if (ACTUAL_MUSIC || music_state == MUSIC_OFF) return;
+
+  //if ((document.visibilityState === "visible" && music_player.getPaused() === true)
+  if ((document.visibilityState === "visible" && music_player.paused === true)
+    || (document.visibilityState === "visible" && music_state == MUSIC_PAUSED))
+    {
+    //music_player.setPaused (false);
+    music_player.paused = false;
+    music_state = MUSIC_PLAYING;
+    }
+  //if ((document.visibilityState != "visible" && music_player.getPaused() === false)
+  if ((document.visibilityState != "visible" && music_player.paused === false)
+    || (document.visibilityState != "visible" && music_state == MUSIC_PLAYING))
+    {
+    //music_player.setPaused (true);
+    music_player.paused = true;
+    music_state = MUSIC_PAUSED;
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
 (function ()
   {
-//   // particles
-//   var max_effects = 20;
-//   var particle_effect = [];
-//   //for (var p = 0; p < max_effects; p += 1) particle_effect[p] = new Particle_Effect ();
-   
-//   // credits screen
-//   var credits_rotation = 0;
-
-  var timer_opacity = 255;
-  var counter_opacity = 255;
         
   ////////////////////////////////////////////////////////////////////////////////
 
@@ -611,15 +692,6 @@ this.blockhead_namespace = this.blockhead_namespace || {};
 
   blockhead.prototype.init = function ()
     {
-//     if (!createjs.Sound.initializeDefaultPlugins())
-//       {
-//       document.getElementById ("canvas_div").style.display = NONE;
-//       return;
-//       }
-    
-//     // initialize particles
-//     //for (var i = 0; i < max_effects; i += 1) particle_effect[i] = new Particle_Effect ();
-   
     block.init (60);
 
     // position title screen objects
@@ -634,7 +706,7 @@ this.blockhead_namespace = this.blockhead_namespace || {};
      
     next_game_state = NONE;
   
-    pulse_speed = pulse_max / pulse_frames;  // amount to increase each frame (256 / frames)
+    // pulse_speed = pulse_max / pulse_frames;  // amount to increase each frame
 
     set_default_options();
 
@@ -658,28 +730,33 @@ this.blockhead_namespace = this.blockhead_namespace || {};
       big_block_animation ();
       }
 
-    else if (game_state === GAME)
-      {    
-      Block_Counter ();
-      Grabber_Control ();
-      Chart_Control ();
-      Goal_Frame_Pulse ();
-      Conveyor_Control ();
-      Falling_Blocks ();
-      Color_Change ();
-      Destroy_Blocks ();
-      Block_Animations ();
-      //if (option_timer === true && game_active === true) Timer_Control ();
-      //Update_Particles ();
-      Check_Win ();
+    else if (game_state === TUMBLE)
+      {
+      Update_Options();
+      Tumble_Control();
+      Falling_Blocks();
+      Check_Tumble_Finished();
       }
 
-    lightning_control ();
-    //Sound_Control ();
-    Music_Control ();
+    else if (game_state === GAME)
+      {
+      Update_Options();
+      Block_Counter();
+      Grabber_Control();
+      Chart_Control();
+      Update_Goal_Frame_Pulse();
+      Conveyor_Control();
+      Falling_Blocks();
+      Color_Change();
+      Destroy_Blocks();
+      Block_Animations();
+      Update_Particles();
+      Check_Win();
+      }
 
-    // update_fade
-    Fade_Control ();
+    lightning_control();
+    Music_Control();
+    Fade_Control();
     }
     
   ////////////////////////////////////////////////////////////////////////////////
@@ -698,15 +775,13 @@ this.blockhead_namespace = this.blockhead_namespace || {};
 
   ////////////////////////////////////////////////////////////////////////////////
 
-  blockhead.prototype.draw = function ()
+  blockhead.prototype.main_draw = function ()
     {
-    var x = 0, y = 0;
-    var x2 = 0, y2 = 0;
-    var x3 = 0, y3 = 0;
-    var r = new Rectangle ();
-    var r2 = new Rectangle ();
-//   //       // string t;
-//   //       // float temp_fade;
+    let x = 0, y = 0;
+    let x2 = 0, y2 = 0;
+    //let x3 = 0, y3 = 0;
+    let r = new Rectangle ();
+    let r2 = new Rectangle ();
 
     if (game_state === MENU)
       {
@@ -742,7 +817,6 @@ this.blockhead_namespace = this.blockhead_namespace || {};
       if (game_active === true) menu_resume_sprite.draw_from_center (canvas_2d, menu_resume.x, menu_resume.y);
       menu_new_sprite.draw_from_center (canvas_2d, menu_new.x, menu_new.y);
       menu_instruct_sprite.draw_from_center (canvas_2d, menu_instruct.x, menu_instruct.y);
-      //menu_exit_sprite.draw_from_center (canvas_2d, menu_exit.x, menu_exit.y);
       ng_sprite.draw (canvas_2d, ng.x, ng.y);
 
       blockhead_bounce.bounce (blockhead_logo_sprite, blockhead_logo.x, blockhead_logo.y, 20, 4, 4);
@@ -772,18 +846,18 @@ this.blockhead_namespace = this.blockhead_namespace || {};
     //   if (credits_rotation >= 360) credits_rotation -= 360;
     //   }
       
-    else if (game_state === GAME)
+    else if (game_state === TUMBLE || game_state === GAME)
       {
-      game.draw_background();
+      draw_background();
    
       // bottom border
       x = 0;
-      y = screen_height - box_sprite.height - demolition_sprite.height;//puzzle_y + puzzle_height - tilesize_y;
+      y = screen_height - box_sprite.height - demolition_sprite.height;
       demolition_sprite.draw (canvas_2d, x, y);
      
       // block smasher (cube the blocks fall into)
-      x = puzzle_x;// + tilesize_x - 1;
-      y = puzzle_y;// + tilesize_y - 1;
+      x = puzzle_x;// + tile_pixel_width - 1;
+      y = puzzle_y;// + tile_pixel_height - 1;
       block_smasher_sprite.draw (canvas_2d, x, y, .5);
      
       // color flash
@@ -800,14 +874,6 @@ this.blockhead_namespace = this.blockhead_namespace || {};
       r.x = 1;
       r.y = 1 + chart.block0 * 21;
       
-      //chart_stuff_sprite.draw_part (x, y, , r);
-
-      //x = chart.v0.x;
-      //y = chart.v2.y;
-      //r.x = 1;
-      //r.y = 1 + chart.block0 * 21;
-      // spriteBatch.Draw (chart_stuff_sprite, v, r);// }
-
       if (chart.block0 < M)
         {
         x = chart.x1; y = chart.y1; r.x = 1;  r.y = 1 + ((chart.block1a - 1) * 21); chart_stuff_sprite.draw_part (canvas_2d, r, x, y);
@@ -818,317 +884,67 @@ this.blockhead_namespace = this.blockhead_namespace || {};
         x = chart.x3; y = chart.y2; r.x = 1;  r.y = 1 + ((chart.block2b - 1) * 21); chart_stuff_sprite.draw_part (canvas_2d, r, x, y);
         }
    
-    // conveyor
-    r.x = 1; r.y = 1 + conveyor.frame * 21; r.width = 66; r.height = 20;
-    conveyor_sprite.draw_part (canvas_2d, r, conveyor.x1, conveyor.y1);
-
-    x = conveyor.x2; y = conveyor.y1;
-    r.x = 68; r.y = 1 + conveyor.frame * 21; r.width = 64; r.height = 20;
-    while (x < screen_x_offset + screen_width)
-      {
-      conveyor_sprite.draw_part (canvas_2d, r, x, y);
-      x += 64;
+      draw_conveyor();
+      draw_lightning();
+      draw_blocks();
+      draw_grabber();
+      draw_quick_menu_box();
+      draw_block_counter();
+      draw_timer();
       }
 
-    // lightning
-    if (grabber.block > -1)
-      {
-      x = grabber.x;
-      y = grabber.y + 72;
-      r.x = 0;//1 + lightning.frame * 79;
-      r.y = lightning.frame * 25;
-      r.width = 78;
-      r.height = 24;
-      lightning_sprite.draw_part (canvas_2d, r, x, y);
-      }
-
-    // blocks
-    r.width = tilesize_x;
-    r2.width = tilesize_x;
-    r2.height = tilesize_y;
-    for (b = 0; b < block.list.length; b += 1)
-      {
-      //console.log ("block.list[" + b + "].status: " + block.list[b].status);
-      if (block.list[b].status === 1)
-        {
-        r.x = block.list[b].x;
-        r.y = block.list[b].y + tilesize_y - block.list[b].height;
-        r.height = block.list[b].height;
-   
-        if (block.list[b].goal_block === 1 && block.list[b].change > -1)
-          {
-          temp_fade = pulse_fade / 255;
-          frame_sprite.draw (canvas_2d, block.list[b].x, block.list[b].y, temp_fade);
-          }
-
-        // rainbow blocks
-        if (block.list[b].color === Q)
-          {
-          r2.width = tilesize_x;
-          r2.height = tilesize_y;
-          r2.x = tilesize_x * block.list[b].colorframe;
-          r2.y = 0;
-          rainbow_sprite.draw_part (canvas_2d, r2, block.list[b].x, block.list[b].y, 1.0);
-          r2.x = tilesize_x * block.list[b].frame;
-          r2.y = tilesize_y;
-          rainbow_sprite.draw_part(canvas_2d, r2, block.list[b].x, block.list[b].y, 1.0);
-
-          //if (r2.x > 160)
-          //  {
-          //  debugger;
-          //  }
-          }
-
-        // non-rainbow blocks
-        else
-         {
-          // r2.x = 0;
-          // r2.y = tilesize_y * 8;
-          // temp_fade = pulse_fade / 255;
-          // if (block.list[b].color === K && block.list[b].change != -1) spriteBatch.Draw (block_sprite, block.list[b].v, r2, Color.White * temp_fade);
-          r2.x = tilesize_x * block.list[b].frame;
-          r2.y = tilesize_y * (block.list[b].color - 1);
-          block_sprite.draw_part_scaled (canvas_2d, r2, r, 1.0);
-          }
-        }
-      }
-
-    // grabber
-    r.x = 1; r.y = 1; r.width = 78; r.height = 72;
-    grabber_sprite.draw_part (canvas_2d, r, grabber.x, grabber.y, 1.0);
-    y = grabber.y - 72;
-    while (y > -72)
-      {
-      x = grabber.x; r.x = 80; r.y = 1; r.width = 78; r.height = 72;
-      grabber_sprite.draw_part (canvas_2d, r, x, y);
-      y -= 72;
-      }
-
-    // menu box
-    if (display_options === false)
-      {
-      box_sprite.draw (canvas_2d, box.x, box.y);
-      box_newgame_sprite.draw (canvas_2d, box_newgame.x, box_newgame.y);
-      box_options_sprite.draw (canvas_2d, box_options.x, box_options.y);
-      box_menu_sprite.draw (canvas_2d, box_menu.x, box_menu.y);
-      }
-
-    game.draw_block_counter();
-
-    // timer
-    if (option_timer === true)
-      {
-      if (timer.time < 10) timer.x = screen_x_offset + (screen_width / 2) - (timer_0_sprite.width * 2.5);
-      else if (timer.time < 100) timer.x = screen_x_offset + (screen_width / 2) - (timer_0_sprite.width * 2);
-      else timer.x = screen_x_offset + (screen_width / 2) - (timer_0_sprite.width * 1.5);
-
-      // t = timer.time.ToString ();
-      // if (t.Length < 2) t = t.Insert (0, "0");
-      // if (t.Length < 3) t = t.Insert (0, "0");
-  // 
-      // temp_fade = Convert.ToSingle (timer_opacity / 255);
-  // 
-      // if (timer.time >= 100)
-        // {
-        // if (t.Substring (0, 1) === "1") spriteBatch.Draw (timer_1_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "2") spriteBatch.Draw (timer_2_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "3") spriteBatch.Draw (timer_3_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "4") spriteBatch.Draw (timer_4_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "5") spriteBatch.Draw (timer_5_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "6") spriteBatch.Draw (timer_6_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "7") spriteBatch.Draw (timer_7_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "8") spriteBatch.Draw (timer_8_sprite, timer.v, Color.White * temp_fade);
-        // if (t.Substring (0, 1) === "9") spriteBatch.Draw (timer_9_sprite, timer.v, Color.White * temp_fade);
-        // }
-      // if (timer.time >= 10)
-        // {
-        // v = timer.v; x = timer.x + 40;
-        // if (t.Substring (1, 1) === "1") spriteBatch.Draw (timer_1_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "2") spriteBatch.Draw (timer_2_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "3") spriteBatch.Draw (timer_3_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "4") spriteBatch.Draw (timer_4_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "5") spriteBatch.Draw (timer_5_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "6") spriteBatch.Draw (timer_6_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "7") spriteBatch.Draw (timer_7_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "8") spriteBatch.Draw (timer_8_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "9") spriteBatch.Draw (timer_9_sprite, v, Color.White * temp_fade);
-        // if (t.Substring (1, 1) === "0") spriteBatch.Draw (timer_0_sprite, v, Color.White * temp_fade);
-        // }
-      // v = timer.v; x = timer.x + 80;
-      // if (t.Substring (2, 1) === "1") spriteBatch.Draw (timer_1_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "2") spriteBatch.Draw (timer_2_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "3") spriteBatch.Draw (timer_3_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "4") spriteBatch.Draw (timer_4_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "5") spriteBatch.Draw (timer_5_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "6") spriteBatch.Draw (timer_6_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "7") spriteBatch.Draw (timer_7_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "8") spriteBatch.Draw (timer_8_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "9") spriteBatch.Draw (timer_9_sprite, v, Color.White * temp_fade);
-      // if (t.Substring (2, 1) === "0") spriteBatch.Draw (timer_0_sprite, v, Color.White * temp_fade);
-      }
-
-    // you win
-    if (game_won === true)
-      {
-      // if (Math.round (Math.random() * 20) <= 1)
-      if (random (0, 20) <= 1)
-        {
-        var firework_color = random (0, 6);//Math.round (Math.random() * 7);
-        var firework_x = random (0, screen_width);//Math.round (Math.random() * screen_width);
-        var firework_y = random (0, screen_height);//Math.round (Math.random() * screen_height);
-        //particle_firework (firework_color, firework_x, firework_y);
-        play_sound ("p");
-        }
-
-      x = screen_x_offset + (screen_width / 2);
-      y = screen_y_offset + (screen_height / 2 - 50);
-      youwin_bounce.bounce (youwin_sprite, x, y, 20, 4, 5);
-      x2 = x - (playagain_sprite.width / 2);
-      y2 = y + (youwin_sprite.height / 2);
-      playagain_sprite.draw (canvas_2d, x2, y2, 1.0);
-      }
-    else if (game_lost === true)
-    	{
-    	youlose_bounce.bounce (youlose_sprite, screen_x_offset + (screen_width / 2), screen_y_offset + (screen_height / 2), 20, 4, 5);
-      }
-
-    // particles
-    // for (var p = 0; p < particle_effect.length; p += 1)
-    //   {
-    //   particle_effect[p].draw ();
-    //   }
-
-    // options_fade.fade (spriteBatch, solid_black, Vector2.Zero);
-
-    if (display_options === true)
-      {
-      // x = options_resume.x - (menu_resume_sprite.width / 2);
-      // y = options_resume.y - (menu_resume_sprite.height / 2);
-      // spriteBatch.Draw (menu_resume_sprite, v);
-  // 
-      // x = options_sound.x - (options_sound_off_sprite.width / 2);
-      // y = options_sound.y - (options_sound_off_sprite.height / 2);
-      // if (option_sound === true) spriteBatch.Draw (options_sound_on_sprite, v);
-      // else spriteBatch.Draw (options_sound_off_sprite, v);
-  // 
-      // x = options_music.x - (options_music_off_sprite.width / 2);
-      // y = options_music.y - (options_music_off_sprite.height / 2);
-      // if (option_music === true) spriteBatch.Draw (options_music_on_sprite, v);
-      // else spriteBatch.Draw (options_music_off_sprite, v);
-  // 
-      // x = options_difficulty.x - (options_difficulty_10_sprite.width / 2);
-      // y = options_difficulty.y - (options_difficulty_10_sprite.height / 2);
-      // if (option_difficulty_next === 1) spriteBatch.Draw (options_difficulty_1_sprite, v);
-      // else if (option_difficulty_next === 2) spriteBatch.Draw (options_difficulty_2_sprite, v);
-      // else if (option_difficulty_next === 3) spriteBatch.Draw (options_difficulty_3_sprite, v);
-      // else if (option_difficulty_next === 4) spriteBatch.Draw (options_difficulty_4_sprite, v);
-      // else if (option_difficulty_next === 5) spriteBatch.Draw (options_difficulty_5_sprite, v);
-      // else if (option_difficulty_next === 6) spriteBatch.Draw (options_difficulty_6_sprite, v);
-      // else if (option_difficulty_next === 7) spriteBatch.Draw (options_difficulty_7_sprite, v);
-      // else if (option_difficulty_next === 8) spriteBatch.Draw (options_difficulty_8_sprite, v);
-      // else if (option_difficulty_next === 9) spriteBatch.Draw (options_difficulty_9_sprite, v);
-      // else if (option_difficulty_next === 10) spriteBatch.Draw (options_difficulty_10_sprite, v);
-  // 
-      // x = options_height.x - (options_height_7_sprite.width / 2);
-      // y = options_height.y - (options_height_7_sprite.height / 2);
-      // if (option_height === 1) spriteBatch.Draw (options_height_1_sprite, v);
-      // else if (option_height === 2) spriteBatch.Draw (options_height_2_sprite, v);
-      // else if (option_height === 3) spriteBatch.Draw (options_height_3_sprite, v);
-      // else if (option_height === 4) spriteBatch.Draw (options_height_4_sprite, v);
-      // else if (option_height === 5) spriteBatch.Draw (options_height_5_sprite, v);
-      // else if (option_height === 6) spriteBatch.Draw (options_height_6_sprite, v);
-      // else if (option_height === 7) spriteBatch.Draw (options_height_7_sprite, v);
-  // 
-      // x = options_timer.x - (options_timer_off_sprite.width / 2);
-      // y = options_timer.y - (options_timer_off_sprite.height / 2);
-      // if (option_timer_next === true) spriteBatch.Draw (options_timer_on_sprite, v);
-      // else spriteBatch.Draw (options_timer_off_sprite, v);
-      }
-    }
-    
-    // menu box
-    if (display_options === true && game_state === GAME)
-      {
-      // spriteBatch.Draw (box_sprite, box.v);
-      // spriteBatch.Draw (box_newgame_sprite, box_newgame.v);
-      // spriteBatch.Draw (box_options_sprite, box_options.v);
-      // spriteBatch.Draw (box_menu_sprite, box_menu.v);
-      }
-
-
-    if (fade_direction != NONE)
+    if (fade_opacity > 0)
       {
       canvas_2d.globalAlpha = fade_opacity;
       solid_black.draw (canvas_2d, 0, 0);
       canvas_2d.globalAlpha = 1.0;
       }
 
+    if (game_state === TUMBLE || game_state === GAME)
+      {
+      // particles
+      for (let p = 0; p < particle_effect.length; p += 1) particle_effect[p].draw();
+
+      // you win / lose
+      if (game_won === true)
+        {
+        // if (Math.round (Math.random() * 20) <= 1)
+        if (random (0, 20) <= 1)
+          {
+          let firework_color = random (0, 6);//Math.round (Math.random() * 7);
+          let firework_x = random (0, screen_width);//Math.round (Math.random() * screen_width);
+          let firework_y = random (0, screen_height);//Math.round (Math.random() * screen_height);
+          particle_firework (firework_color, firework_x, firework_y);
+          play_sound ("p");
+          }
+
+        x = screen_x_offset + (screen_width / 2);
+        y = screen_y_offset + (screen_height / 2 - 50);
+        youwin_bounce.bounce (youwin_sprite, x, y, 20, 4, 5);
+        x2 = x - (playagain_sprite.width / 2);
+        y2 = y + (youwin_sprite.height / 2);
+        playagain_sprite.draw (canvas_2d, x2, y2, 1.0);
+        }
+      else if (game_lost === true)
+      	{
+      	youlose_bounce.bounce (youlose_sprite, screen_x_offset + (screen_width / 2), screen_y_offset + (screen_height / 2), 20, 4, 5);
+        }
+
+      if (display_options === true)  draw_options_screen();
+      }  // game_state === GAME
+    
     //console.log (game_state);
 
-
-  //   // debug text
-  //   // canvas_2d.fillStyle = "#FFFF00";
-  //   // canvas_2d.font = "16px arial";
-  //   // canvas_2d.fillText ("mouse_x: " + mouse_x, 5, 20);
-  //   // canvas_2d.fillText ("mouse_y: " + mouse_y, 5, 40);
-  //   // canvas_2d.fillText ("menu_new.x: " + menu_new.x, 5, 60);
-  //   // canvas_2d.fillText ("menu_new.y: " + menu_new.y, 5, 80);
-  //   // canvas_2d.fillText ("screen_x_offset: " + screen_x_offset, 5, 100);
-  //   // canvas_2d.fillText ("screen_width: " + screen_width, 5, 120);
-  //   // canvas_2d.fillText ("menu_new_sprite.width: " + menu_new_sprite.width, 5, 140);
-    }
-
-  blockhead.prototype.draw_background = function()
-    {
-    background[background_index].draw (canvas_2d, screen_x_offset, screen_y_offset);
-	  }
-
-	blockhead.prototype.draw_block_counter = function()
-	  {
-	  block_counter.x = 0;
-	  block_counter.y = 0;
-	  x = block_counter.x;
-	  y = block_counter.y;
-	  //if (goal_blocks < 10) x += counter_0_sprite.width / 2;
-	 
-	  t = "" + goal_blocks;
-	  if (t.length < 2)
-	  	{
-	  	//t = "0" + t;
-	  	x += counter_0_sprite.width / 2;
-	    }
-
-	  temp_fade = counter_opacity / 255;
-
-	  if (t[0] === "1") counter_1_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "2") counter_2_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "3") counter_3_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "4") counter_4_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "5") counter_5_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "6") counter_6_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "7") counter_7_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "8") counter_8_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "9") counter_9_sprite.draw (canvas_2d, x, y, 1.0);
-	  if (t[0] === "0") counter_0_sprite.draw (canvas_2d, x, y, 1.0);
-	  x = block_counter.x + 35;
-
-	  if (t.length > 1)
-	    {
-	    if (t[1] === "1") counter_1_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "2") counter_2_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "3") counter_3_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "4") counter_4_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "5") counter_5_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "6") counter_6_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "7") counter_7_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "8") counter_8_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "9") counter_9_sprite.draw (canvas_2d, x, y, 1.0);
-	    if (t[1] === "0") counter_0_sprite.draw (canvas_2d, x, y, 1.0);
-	    }
-
-	  x = block_counter.x;
-	  y = block_counter.y + 40;
-	  counter_label.draw (canvas_2d, x, y, 1.0);
+    // debug text
+    // canvas_2d.fillStyle = "#FFFF00";
+    // canvas_2d.font = "16px arial";
+    // canvas_2d.fillText ("mouse_x: " + mouse_x, 5, 20);
+    // canvas_2d.fillText ("mouse_y: " + mouse_y, 5, 40);
+    // canvas_2d.fillText ("menu_new.x: " + menu_new.x, 5, 60);
+    // canvas_2d.fillText ("menu_new.y: " + menu_new.y, 5, 80);
+    // canvas_2d.fillText ("screen_x_offset: " + screen_x_offset, 5, 100);
+    // canvas_2d.fillText ("screen_width: " + screen_width, 5, 120);
+    // canvas_2d.fillText ("menu_new_sprite.width: " + menu_new_sprite.width, 5, 140);
     }
 
   }());
